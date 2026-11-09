@@ -14,12 +14,10 @@ RUN apt-get update -qq \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
-ARG BUILD_COMMIT_SHA
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development" \
-    BUILD_COMMIT_SHA=${BUILD_COMMIT_SHA}
+    BUNDLE_WITHOUT="development"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -46,6 +44,8 @@ RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Final stage for app image
 FROM base
+ARG BUILD_COMMIT_SHA
+ENV BUILD_COMMIT_SHA=${BUILD_COMMIT_SHA}
 
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \

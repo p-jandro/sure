@@ -7,7 +7,7 @@ $ComposeFile = Join-Path $RepositoryRoot 'compose.windows.yml'
 function Invoke-SureCompose {
     $PreviousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    & docker compose --env-file $EnvironmentFile -f $ComposeFile @args
+    & docker compose --env-file $EnvironmentFile -f $ComposeFile @args 2>&1 | ForEach-Object { $_.ToString() }
     $CommandExit = $LASTEXITCODE
     $ErrorActionPreference = $PreviousPreference
     if ($CommandExit -ne 0) { throw "Sure command failed with exit code $CommandExit." }

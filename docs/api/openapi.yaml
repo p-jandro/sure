@@ -7757,7 +7757,8 @@ paths:
   "/api/v1/imports":
     get:
       summary: List imports
-      description: List all imports for the user's family with pagination and filtering.
+      description: List generic-workflow imports for the user's family with pagination
+        and filtering. Finance Workspace bank-file imports are excluded.
       tags:
       - Imports
       security:
@@ -8088,6 +8089,7 @@ paths:
       summary: Retrieve an import
       description: Retrieve detailed information about a specific import, including
         configuration, row statistics, and SureImport readback verification when available.
+        Finance Workspace bank-file imports return 404.
       tags:
       - Imports
       security:
@@ -8116,7 +8118,7 @@ paths:
     get:
       summary: List import row diagnostics
       description: List sanitized import rows with validation errors and mapping resolution
-        state.
+        state. Finance Workspace bank-file imports return 404.
       tags:
       - Imports
       security:
