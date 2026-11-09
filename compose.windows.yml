@@ -1,0 +1,171 @@
+name: futurecode-sure
+
+x-runtime: &runtime
+  POSTGRES_USER: sure
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run bin/windows/Setup.ps1 first}
+  POSTGRES_DB: sure_production
+  DB_HOST: db
+  DB_PORT: "5432"
+  REDIS_URL: redis://redis:6379/1
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:?Run bin/windows/Setup.ps1 first}
+  RAILS_ENV: production
+  SELF_HOSTED: "true"
+  RAILS_FORCE_SSL: "false"
+  RAILS_ASSUME_SSL: "false"
+  RAILS_LOG_TO_STDOUT: "true"
+  ONBOARDING_STATE: closed
+  TZ: Europe/Budapest
+  RAILS_MAX_THREADS: "3"
+  WEB_CONCURRENCY: "1"
+  FINANCE_WORKSPACE_HOME: "true"
+  POSTHOG_FEEDBACK_ENABLED: "false"
+  SURE_PERSONAL_ACCOUNT_NAME: ${SURE_PERSONAL_ACCOUNT_NAME:-}
+  SURE_BUSINESS_ACCOUNT_NAME: ${SURE_BUSINESS_ACCOUNT_NAME:-}
+  OPENAI_ACCESS_TOKEN: ""
+  ANTHROPIC_API_KEY: ""
+  LANGFUSE_PUBLIC_KEY: ""
+  LANGFUSE_SECRET_KEY: ""
+
+services:
+  web:
+    image: futurecode/sure:${SURE_IMAGE_TAG:-local}
+    build:
+      context: .
+      args:
+        BUILD_COMMIT_SHA: ${BUILD_COMMIT_SHA:-local}
+    environment: *runtime
+    ports:
+      - "127.0.0.1:${PORT:-3333}:3000"
+    volumes:
+      - app-storage:/rails/storage
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    image: futurecode/sure:${SURE_IMAGE_TAG:-local}
+    environment: *runtime
+    command: bundle exec sidekiq
+    volumes:
+      - app-storage:/rails/storage
+    restart: unless-stopped
+    depends_on:
+      web: { condition: service_healthy }
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sure
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup first}
+      POSTGRES_DB: sure_production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sure -d sure_production"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7.4-alpine
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backup:
+    profiles: [backup]
+    image: futurecode/sure:${SURE_IMAGE_TAG:-local}
+    user: "0"
+    entrypoint: ["bin/sure-backup"]
+    environment:
+      POSTGRES_USER: sure
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup first}
+      POSTGRES_DB: sure_production
+      POSTGRES_HOST: db
+      BACKUP_SCHEDULE: "0 2 * * *"
+      BACKUP_KEEP_DAYS: "14"
+      INSTANCE_ID: futurecode-sure
+    volumes:
+      - ../sure-private/backups:/backups
+      - app-storage:/rails/storage
+      - ./compose.windows.yml:/config/compose.yml:ro
+      - ../sure-private/runtime/.env:/config/.env:ro
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+
+  test-db:
+    profiles: [verification]
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sure_test
+      POSTGRES_PASSWORD: local_test_only
+      POSTGRES_DB: sure_test
+    volumes:
+      - test-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sure_test -d sure_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  test-redis:
+    profiles: [verification]
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  selenium:
+    profiles: [verification]
+    image: selenium/standalone-chromium:latest
+    shm_size: 2gb
+    environment:
+      SE_NODE_MAX_SESSIONS: "2"
+      SE_NODE_OVERRIDE_MAX_SESSIONS: "true"
+
+  test:
+    profiles: [verification]
+    image: futurecode/sure:${SURE_IMAGE_TAG:-local}
+    environment:
+      RAILS_ENV: test
+      SELF_HOSTED: "false"
+      POSTGRES_USER: sure_test
+      POSTGRES_PASSWORD: local_test_only
+      POSTGRES_DB: sure_test
+      DB_HOST: test-db
+      DB_PORT: "5432"
+      REDIS_URL: redis://test-redis:6379/1
+      SECRET_KEY_BASE: test-only-not-a-production-secret
+      PLAID_CLIENT_ID: foo
+      PLAID_SECRET: bar
+      PARALLEL_WORKERS: "4"
+      SELENIUM_REMOTE_URL: http://selenium:4444
+      POSTHOG_FEEDBACK_ENABLED: "false"
+      RAILS_MAX_THREADS: "5"
+    working_dir: /rails
+    volumes:
+      - ../sure-private/evidence:/evidence
+    depends_on:
+      test-db: { condition: service_healthy }
+      test-redis: { condition: service_healthy }
+
+volumes:
+  app-storage:
+  postgres-data:
+  redis-data:
+  test-postgres-data:

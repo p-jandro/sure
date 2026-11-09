@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_09_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -279,6 +279,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.index ["account_id", "date", "currency"], name: "index_account_balances_on_account_id_date_currency_unique", unique: true
     t.index ["account_id", "date"], name: "index_balances_on_account_id_and_date", order: { date: :desc }
     t.index ["account_id"], name: "index_balances_on_account_id"
+  end
+
+  create_table "bank_file_account_links", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.boolean "balance_verified", default: false, null: false
+    t.date "coverage_end_on"
+    t.date "coverage_start_on"
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.string "entity", null: false
+    t.uuid "family_id", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.boolean "needs_review", default: false, null: false
+    t.string "owner_name", null: false
+    t.string "provider", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_bank_file_account_links_on_account_id", unique: true
+    t.index ["family_id", "provider", "entity", "currency"], name: "index_bank_file_links_on_scope", unique: true
+    t.index ["family_id"], name: "index_bank_file_account_links_on_family_id"
+    t.check_constraint "entity::text = ANY (ARRAY['personal'::character varying, 'business'::character varying]::text[])", name: "bank_file_links_entity"
+    t.check_constraint "provider::text = ANY (ARRAY['wise'::character varying, 'revolut'::character varying]::text[])", name: "bank_file_links_provider"
   end
 
   create_table "binance_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1606,7 +1627,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
-    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying, 'actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying::text, 'actual_365'::character varying::text, 'actual_actual'::character varying::text])", name: "chk_loans_day_count_convention"
     t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
     t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
     t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying::text, 'decreasing_life'::character varying::text]))", name: "chk_loans_insurance_rate_type"
@@ -1975,7 +1996,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3101,6 +3122,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "akahu_items", "families"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
+  add_foreign_key "bank_file_account_links", "accounts", on_delete: :cascade
+  add_foreign_key "bank_file_account_links", "families", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
   add_foreign_key "brex_accounts", "brex_items"
