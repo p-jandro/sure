@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+
+# Extend the exact application candidate; do not rebuild or copy its source here.
+ARG VERIFICATION_BASE_IMAGE=futurecode/sure:local
+FROM ${VERIFICATION_BASE_IMAGE}
+
+USER 0:0
+
+# Workflow regression tests create temporary Git repositories and execute a
+# mocked GitHub Actions JavaScript harness. These tools are verification-only.
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y git nodejs && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* && \
+    command -v bash && command -v date && command -v sed && command -v awk
+
+USER 1000:1000

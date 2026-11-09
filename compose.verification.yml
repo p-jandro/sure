@@ -1,0 +1,30 @@
+# Use with compose.windows.yml. Production services keep their existing image.
+services:
+  test:
+    image: ${SURE_VERIFY_IMAGE:-futurecode/sure:verification}
+    build:
+      context: .
+      dockerfile: Dockerfile.verification
+      args:
+        VERIFICATION_BASE_IMAGE: ${SURE_VERIFY_BASE_IMAGE:-futurecode/sure:local}
+    volumes:
+      # Only tracked, non-secret test inputs omitted by the production build.
+      # Missing inputs fail instead of becoming empty host directories.
+      - type: bind
+        source: ./.env.example
+        target: /rails/.env.example
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.env.local.example
+        target: /rails/.env.local.example
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.github/workflows
+        target: /rails/.github/workflows
+        read_only: true
+        bind:
+          create_host_path: false
