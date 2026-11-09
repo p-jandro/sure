@@ -17,6 +17,22 @@ The app opens at **http://localhost:3333/finance**. Only the loopback web port i
 
 Runtime credentials, original imports, evidence and backups are in the sibling **sure-private** directory, outside the repository/build context. Your local login is in `sure-private/runtime/login.txt`; change its password in Settings. Do not commit or share that directory. The app sends no financial data to an LLM by default.
 
+## Encryption of supported fields
+
+New setup generates three independent encryption keys before creating the user. They protect the model fields that Sure explicitly encrypts, including user PII, MFA secrets and supported provider credentials. Imported CSV text, transaction details and bank-file metadata are not encrypted by this setting; it is not whole-database encryption.
+
+Before upgrading an existing installation, back up its database and private environment file. Setup preserves a complete existing key triplet and refuses a partial one. If all three keys are absent, it derives the exact keys used by the previous self-hosted initializer from the preserved `SECRET_KEY_BASE`, and enables plaintext compatibility so existing users remain readable and searchable. Custom dotenv interpolation or escaped secret values require an explicit migration instead of guessed keys.
+
+After setup, use the existing backfill task with the same environment:
+
+```powershell
+. .\bin\windows\Common.ps1
+Invoke-SureCompose run --rm web bin/rails 'security:backfill_encryption[100,true]'
+Invoke-SureCompose run --rm web bin/rails 'security:backfill_encryption[100,false]'
+```
+
+Check the task's failure counts, encrypted-field coverage and existing login before setting `ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA=false` in the private environment file and recreating web and worker. The task covers a defined set of models; its success alone does not prove every field was migrated. Preserve all three keys with backups. Setup never rotates existing keys, and the verification service does not inherit production encryption keys.
+
 ## Import bank files
 
 1. Open **Finance** and select Personal or Business.
