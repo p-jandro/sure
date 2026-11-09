@@ -5,11 +5,11 @@ abort "Refusing to bootstrap a non-local instance" unless Rails.application.conf
 
 User.transaction do
   User.lock_first_user_role!
-  user = User.find_by(email: config.fetch("email"))
-  if user
-    puts JSON.generate(status: "existing", user_id: user.id, family_id: user.family_id)
+  if User.exists?
+    # Existing instances keep their accounts even while encrypted fields are
+    # being backfilled or the owner has changed their original login email.
+    puts JSON.generate(status: "existing_instance")
   else
-    abort "An instance already exists; use its account management" if User.exists?
     family = Family.create!(
       name: config.fetch("family_name", "My finances"),
       country: "HU", currency: "HUF", enabled_currencies: %w[HUF EUR GBP USD INR],
