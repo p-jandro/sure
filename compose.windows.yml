@@ -33,6 +33,9 @@ services:
       context: .
       args:
         BUILD_COMMIT_SHA: ${BUILD_COMMIT_SHA:-local}
+      tags:
+        - "futurecode/sure:0.0.0-dev.${BUILD_COMMIT_SHA:-local}"
+        - "futurecode/sure:sha-${BUILD_COMMIT_SHA:-local}"
     environment: *runtime
     ports:
       - "127.0.0.1:${PORT:-3333}:3000"
@@ -97,6 +100,7 @@ services:
       BACKUP_SCHEDULE: "0 2 * * *"
       BACKUP_KEEP_DAYS: "14"
       INSTANCE_ID: futurecode-sure
+      SURE_IMAGE_REPO: futurecode/sure
     volumes:
       - ../sure-private/backups:/backups
       - app-storage:/rails/storage

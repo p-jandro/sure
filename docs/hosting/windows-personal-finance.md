@@ -64,14 +64,10 @@ Start enables a daily local full backup at 02:00 UTC with 14-day retention. Run 
 .\bin\windows\Start.ps1 -Build
 ```
 
-Backups include the database, uploaded files and secret configuration. Keep them private. Preserve the source revision and local Docker image with the backup. See the upstream Docker hosting guide before restoring; never restore over a running instance without a reviewed recovery plan.
+Backups include the database, uploaded files and secret configuration. Keep them private. Local builds retain version and commit tags on the Docker image so the backup manifest identifies the matching source and image. Preserve these images and the source revision with the backup. See the upstream Docker hosting guide before restoring; never restore over a running instance without a reviewed recovery plan.
 
 ## Verification
 
-The `verification` profile uses a separate test database and Redis. It never points at the production database. Run tests from the built image to avoid slow Windows bind-mount startup:
+The verification profile uses a separate test database and Redis. The [Windows verification guide](windows-verification.md) builds a small verification layer over the exact application image, adds the Git/Node tools used by the full test suite, and mounts tracked workflow and configuration examples read-only.
 
-```powershell
-docker compose --env-file ..\sure-private\runtime\.env -f compose.windows.yml --profile verification run --rm test bin/rails test
-```
-
-Initialize a fresh test database with `bin/rails db:prepare` first. Selenium is available on the internal network for system tests. Full tests, lint/security checks and browser acceptance should be recorded against the exact source commit before publishing changes.
+Follow that guide to prepare the isolated test database and run the full Rails gate. Selenium is available on the internal network for browser checks. Record test results against the exact source commit before publishing changes.
