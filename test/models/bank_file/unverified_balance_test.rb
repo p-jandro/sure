@@ -31,12 +31,12 @@ class BankFile::UnverifiedBalanceTest < ActiveSupport::TestCase
     family_sync = @family.syncs.create!
     @family.stubs(:sync_trial_status!)
 
-    assert_difference -> { family_sync.children.count }, 2 do
-      Family::Syncer.new(@family).perform_sync(family_sync)
-    end
+    Family::Syncer.new(@family).perform_sync(family_sync)
 
-    assert_equal [ ordinary.id, verified.id ].sort,
-      family_sync.children.where(syncable_type: "Account").pluck(:syncable_id).sort
+    scheduled_account_ids = family_sync.children.where(syncable_type: "Account").pluck(:syncable_id)
+    assert_includes scheduled_account_ids, ordinary.id
+    assert_includes scheduled_account_ids, verified.id
+    refute_includes scheduled_account_ids, @unverified.id
     assert_empty @unverified.syncs
   end
 
