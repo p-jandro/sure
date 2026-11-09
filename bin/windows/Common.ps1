@@ -13,17 +13,26 @@ function Invoke-SureCompose {
     if ($CommandExit -ne 0) { throw "Sure command failed with exit code $CommandExit." }
 }
 
+function Test-SureDocker {
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & docker info --format '{{.ServerVersion}}' *> $null
+        return $LASTEXITCODE -eq 0
+    } finally {
+        $ErrorActionPreference = $PreviousPreference
+    }
+}
+
 function Start-SureDocker {
-    & docker info --format '{{.ServerVersion}}' 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) { return }
+    if (Test-SureDocker) { return }
     $DockerDesktop = Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
     if (!(Test-Path $DockerDesktop)) { throw 'Install Docker Desktop with the WSL2 backend first.' }
     Start-Process $DockerDesktop
     $Deadline = (Get-Date).AddSeconds(55)
     do {
         Start-Sleep -Seconds 2
-        & docker info --format '{{.ServerVersion}}' 2>$null | Out-Null
-        if ($LASTEXITCODE -eq 0) { return }
+        if (Test-SureDocker) { return }
     } while ((Get-Date) -lt $Deadline)
     throw 'Docker is still starting. Wait for Docker Desktop, then run this command again.'
 }
