@@ -6,6 +6,11 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
+    if account.bank_file_balance_unverified?
+      Rails.logger.info("Skipping balance calculation for unverified bank-file history")
+      return
+    end
+
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)

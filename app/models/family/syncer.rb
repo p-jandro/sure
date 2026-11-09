@@ -48,6 +48,6 @@ class Family::Syncer
         family.public_send(association).syncable
       end
 
-      provider_items + family.accounts.manual
+      provider_items + family.accounts.manual.balance_syncable
     end
 end

@@ -83,9 +83,20 @@ class Account < ApplicationRecord
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
+  # Imported history has no reliable opening or current balance until explicitly
+  # reconciled. A normal refresh must not turn its zero placeholder into a balance.
+  scope :balance_syncable, -> {
+    where.not(id: BankFile::AccountLink.where(balance_verified: false).select(:account_id))
+  }
+
   # Accounts whose data should be included in financial reports, dashboards,
-  # and exports. Excludes accounts where the user has opted to suppress them.
-  scope :included_in_reports, -> { where(exclude_from_reports: false) }
+  # and exports. Unverified history stays excluded even if its checkbox is changed.
+  scope :included_in_reports, -> { where(exclude_from_reports: false).balance_syncable }
+
+  def bank_file_balance_unverified?
+    BankFile::AccountLink.where(account_id: id, balance_verified: false).exists?
+  end
+
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
