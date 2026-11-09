@@ -1,0 +1,148 @@
+<% content_for :page_title, t("finance_workspace.title") %>
+<% content_for :page_actions do %>
+  <%= render DS::Link.new(text: t("finance_workspace.sure_overview"), href: root_path, variant: :ghost, icon: "pie-chart") %>
+  <%= render DS::Link.new(text: t("finance_workspace.add_file"), href: "#bank-file-upload", variant: :primary, icon: "upload") unless Current.user.guest? %>
+<% end %>
+
+<div class="space-y-6" data-testid="finance-workspace">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="space-y-2">
+      <p class="text-secondary text-sm"><%= t("finance_workspace.subtitle") %></p>
+      <%= render DS::SegmentedControl.new(aria_label: t("finance_workspace.scope_label")) do |control| %>
+        <% FinanceWorkspace::ENTITIES.each do |entity| %>
+          <% control.with_segment(t("finance_workspace.entities.#{entity}"), href: finance_workspace_path(entity: entity), active: @workspace.entity == entity) %>
+        <% end %>
+      <% end %>
+    </div>
+    <%= render DS::Pill.new(label: t("finance_workspace.history_mode"), tone: :info, marker: false, icon: "file-check") %>
+  </div>
+
+  <% if @workspace.links.any? %>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <%= render DS::Card.new do %>
+        <p class="text-secondary text-sm"><%= t("finance_workspace.accounts_tracked") %></p>
+        <p class="mt-3 text-3xl font-medium text-primary tabular-nums"><%= @workspace.links.length %></p>
+        <p class="mt-2 text-xs text-secondary"><%= t("finance_workspace.original_currencies") %></p>
+      <% end %>
+      <%= render DS::Card.new do %>
+        <p class="text-secondary text-sm"><%= t("finance_workspace.recorded_activity") %></p>
+        <p class="mt-3 text-3xl font-medium text-primary tabular-nums"><%= number_with_delimiter(@workspace.transaction_count) %></p>
+        <p class="mt-2 text-xs text-secondary"><%= t("finance_workspace.verified_rows") %></p>
+      <% end %>
+      <%= render DS::Card.new do %>
+        <p class="text-secondary text-sm"><%= t("finance_workspace.latest_activity") %></p>
+        <p class="mt-3 text-xl font-medium text-primary"><%= @workspace.last_activity_on ? l(@workspace.last_activity_on, format: :long) : t("finance_workspace.no_activity") %></p>
+        <div class="mt-2"><%= render DS::Pill.new(label: t(@workspace.stale? ? "finance_workspace.export_update_needed" : "finance_workspace.imported_snapshot"), tone: @workspace.stale? ? :warning : :neutral, marker: false) %></div>
+      <% end %>
+    </div>
+
+    <%= render DS::Alert.new(title: t("finance_workspace.coverage_title"), message: t("finance_workspace.coverage_notice"), variant: :info) %>
+
+    <section class="space-y-3" aria-labelledby="cashflow-title">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="cashflow-title" class="font-medium text-primary"><%= t("finance_workspace.cashflow.title") %></h2>
+          <p class="mt-1 text-xs text-secondary"><%= t("finance_workspace.cashflow.description") %></p>
+        </div>
+        <%= styled_form_with url: finance_workspace_path, method: :get, class: "flex items-end gap-2" do |form| %>
+          <%= form.hidden_field :entity, value: @workspace.entity %>
+          <%= form.select :month, @workspace.months.map { |month| [l(month, format: "%B %Y"), month.strftime("%Y-%m")] }, { selected: @workspace.month.strftime("%Y-%m"), label: t("finance_workspace.cashflow.month") } %>
+          <%= render DS::Button.new(text: t("finance_workspace.cashflow.apply"), type: :submit, variant: :secondary) %>
+        <% end %>
+      </div>
+      <% if @workspace.cashflows.any? %>
+        <%= render DS::Table.new(rows: @workspace.cashflows, label: t("finance_workspace.cashflow.title")) do |table| %>
+          <% table.with_column(t("finance_workspace.columns.currency")) { |row| row[:currency] } %>
+          <% table.with_column(t("finance_workspace.cashflow.money_in"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:inflow]) } %>
+          <% table.with_column(t("finance_workspace.cashflow.money_out"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:outflow]) } %>
+          <% table.with_column(t("finance_workspace.cashflow.net"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:net]) } %>
+        <% end %>
+      <% else %>
+        <%= render DS::Card.new do %>
+          <%= render DS::EmptyState.new(icon: "calendar", title: t("finance_workspace.cashflow.empty"), description: t("finance_workspace.cashflow.empty_description")) %>
+        <% end %>
+      <% end %>
+    </section>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="space-y-3" aria-labelledby="account-coverage-title">
+        <h2 id="account-coverage-title" class="font-medium text-primary"><%= t("finance_workspace.account_coverage.title") %></h2>
+        <%= render DS::Table.new(rows: @workspace.account_coverages, label: t("finance_workspace.account_coverage.title")) do |table| %>
+          <% table.with_column(t("finance_workspace.columns.account")) do |row| %>
+            <div class="space-y-1">
+              <%= render DS::Link.new(text: row[:link].account.name, href: account_path(row[:link].account), variant: :default) %>
+              <p class="text-xs text-secondary"><%= t("finance_workspace.entities.#{row[:link].entity}") %> · <%= row[:link].currency %></p>
+            </div>
+          <% end %>
+          <% table.with_column(t("finance_workspace.columns.coverage")) do |row| %>
+            <div class="space-y-1 text-xs">
+              <p><%= row[:first_date] ? l(row[:first_date], format: :long) : t("finance_workspace.no_activity") %></p>
+              <p class="text-secondary"><%= row[:last_date] ? l(row[:last_date], format: :long) : "" %></p>
+            </div>
+          <% end %>
+          <% table.with_column(t("finance_workspace.columns.balance")) do |row| %>
+            <%= render DS::Pill.new(label: t(row[:link].balance_verified? ? "finance_workspace.balance_verified" : "finance_workspace.balance_unverified"), tone: row[:link].balance_verified? ? :success : :warning, marker: false) %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <section class="space-y-3" aria-labelledby="categories-title">
+        <h2 id="categories-title" class="font-medium text-primary"><%= t("finance_workspace.categories.title") %></h2>
+        <% if @workspace.categories.any? %>
+          <%= render DS::Table.new(rows: @workspace.categories, label: t("finance_workspace.categories.title")) do |table| %>
+            <% table.with_column(t("finance_workspace.columns.category")) { |row| row[:name].presence || t("finance_workspace.categories.uncategorized") } %>
+            <% table.with_column(t("finance_workspace.columns.currency")) { |row| row[:currency] } %>
+            <% table.with_column(t("finance_workspace.columns.amount"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:amount]) } %>
+          <% end %>
+        <% else %>
+          <%= render DS::Card.new do %>
+            <%= render DS::EmptyState.new(icon: "tags", title: t("finance_workspace.categories.empty"), description: t("finance_workspace.categories.description")) %>
+          <% end %>
+        <% end %>
+      </section>
+    </div>
+
+    <section class="space-y-3" aria-labelledby="recent-activity-title">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="recent-activity-title" class="font-medium text-primary"><%= t("finance_workspace.recent.title") %></h2>
+        <%= render DS::Link.new(text: t("finance_workspace.recent.view_all"), href: transactions_path(q: { account_ids: @workspace.account_ids }), variant: :default) %>
+      </div>
+      <%= render DS::Table.new(rows: @workspace.recent_entries, label: t("finance_workspace.recent.title")) do |table| %>
+        <% table.with_column(t("finance_workspace.columns.date")) { |entry| l(entry.date, format: :long) } %>
+        <% table.with_column(t("finance_workspace.columns.description")) do |entry| %>
+          <div class="space-y-1">
+            <p class="text-primary"><%= entry.name %></p>
+            <p class="text-xs text-secondary"><%= entry.account.name %></p>
+          </div>
+        <% end %>
+        <% table.with_column(t("finance_workspace.columns.category")) { |entry| entry.entryable.category&.name.presence || t("finance_workspace.categories.uncategorized") } %>
+        <% table.with_column(t("finance_workspace.columns.amount"), numeric: true, class: "privacy-sensitive") { |entry| format_money(Money.new(-entry.amount, entry.currency)) } %>
+      <% end %>
+    </section>
+  <% else %>
+    <%= render DS::Card.new do %>
+      <%= render DS::EmptyState.new(icon: "wallet", title: t("finance_workspace.empty.title"), description: t("finance_workspace.empty.description")) %>
+    <% end %>
+  <% end %>
+
+  <div class="grid gap-6 xl:grid-cols-2">
+    <%= render "upload" unless Current.user.guest? %>
+    <%= render "connections" %>
+  </div>
+
+  <% if @workspace.imports.any? %>
+    <section class="space-y-3" aria-labelledby="import-history-title">
+      <h2 id="import-history-title" class="font-medium text-primary"><%= t("finance_workspace.import_history.title") %></h2>
+      <%= render DS::Table.new(rows: @workspace.imports, label: t("finance_workspace.import_history.title")) do |table| %>
+        <% table.with_column(t("finance_workspace.columns.file")) do |import| %>
+          <%= render DS::Link.new(text: import.summary.dig("bank_file", "filename"), href: finance_workspace_import_path(import), variant: :default) %>
+        <% end %>
+        <% table.with_column(t("finance_workspace.columns.entity")) { |import| t("finance_workspace.entities.#{import.summary.dig('bank_file', 'entity')}") } %>
+        <% table.with_column(t("finance_workspace.columns.status")) do |import| %>
+          <%= render DS::Pill.new(label: t("finance_workspace.statuses.#{import.status}"), tone: import.complete? ? :success : :neutral, marker: false) %>
+        <% end %>
+        <% table.with_column(t("finance_workspace.columns.date")) { |import| l(import.created_at.to_date, format: :long) } %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

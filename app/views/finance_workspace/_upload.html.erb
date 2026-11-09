@@ -1,0 +1,21 @@
+<%= render DS::Card.new(id: "bank-file-upload") do %>
+  <div class="space-y-2 mb-5">
+    <h2 class="font-medium text-primary"><%= t("finance_workspace.upload.title") %></h2>
+    <p class="text-sm text-secondary"><%= t("finance_workspace.upload.description") %></p>
+  </div>
+  <%= styled_form_with url: finance_workspace_imports_path, scope: :bank_file, multipart: true, class: "space-y-4", data: { turbo: false } do |form| %>
+    <%= form.select :entity, [[t("finance_workspace.entities.personal"), "personal"], [t("finance_workspace.entities.business"), "business"]], { selected: @upload_entity, label: t("finance_workspace.upload.entity") }, { required: true } %>
+    <%= form.text_field :owner_name, value: @owner_name, label: t("finance_workspace.upload.owner"), help_text: t("finance_workspace.upload.owner_hint"), required: true, maxlength: 200, autocomplete: "off" %>
+    <%= form.file_field :file, label: t("finance_workspace.upload.file"), accept: ".csv,text/csv,text/plain", required: true %>
+    <p class="text-xs text-secondary"><%= t("finance_workspace.upload.limit") %></p>
+    <%= form.submit t("finance_workspace.upload.preview") %>
+  <% end %>
+  <% if @workspace.pending_imports.any? %>
+    <div class="mt-5 pt-4 border-t border-primary space-y-2">
+      <p class="text-xs text-secondary"><%= t("finance_workspace.upload.pending") %></p>
+      <% @workspace.pending_imports.each do |import| %>
+        <%= render DS::Link.new(text: import.summary.dig("bank_file", "filename"), href: finance_workspace_import_path(import), icon: "arrow-right", variant: :default) %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

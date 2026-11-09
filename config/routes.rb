@@ -2,6 +2,12 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  get "finance", to: "finance_workspace#index", as: :finance_workspace
+  post "finance/imports", to: "finance_workspace#upload", as: :finance_workspace_imports
+  get "finance/imports/:id", to: "finance_workspace#preview", as: :finance_workspace_import
+  post "finance/imports/:id/confirm", to: "finance_workspace#confirm", as: :confirm_finance_workspace_import
+  delete "finance/imports/:id", to: "finance_workspace#discard"
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts

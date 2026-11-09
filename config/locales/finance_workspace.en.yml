@@ -1,0 +1,129 @@
+en:
+  finance_workspace:
+    title: Finance workspace
+    nav: Finance
+    subtitle: Personal and business activity, with a clear view of what your exports actually cover.
+    sure_overview: Net worth & planning
+    add_file: Add bank file
+    scope_label: Financial scope
+    entities:
+      all: Everything
+      personal: Personal
+      business: Business
+    history_mode: Imported history
+    accounts_tracked: Currency accounts
+    original_currencies: Personal and business accounts stay separate.
+    recorded_activity: Recorded entries
+    verified_rows: Includes transfers and separately recorded fees.
+    latest_activity: Latest exported activity
+    no_activity: No activity
+    export_update_needed: Add a recent export
+    imported_snapshot: CSV snapshot
+    coverage_title: Activity history, with balance checks still to do
+    coverage_notice: These figures describe imported transactions. Gaps between exports may exist, and the latest transaction date is not proof of a complete statement. Accounts without a verified balance stay outside net worth reports. Review the account and reconcile a dated statement balance before including it.
+    balance_verified: Balance checked
+    balance_unverified: Unverified
+    empty:
+      title: Start with your bank history
+      description: Add a Wise or Revolut CSV, choose personal or business, and review the preview. Your original currencies and bank transaction identifiers are preserved.
+    columns:
+      currency: Currency
+      account: Account
+      coverage: Activity dates
+      balance: Balance
+      category: Category
+      amount: Amount
+      date: Date
+      description: Description
+      file: File
+      entity: Scope
+      status: Status
+      type: Type
+    cashflow:
+      title: Monthly cashflow
+      description: Original currencies, kept separate. Transfers and FX movements are excluded. Refunds are money in; these figures are not taxable profit.
+      month: Month
+      apply: Show
+      money_in: Money in
+      money_out: Money out
+      net: Net movement
+      empty: No external activity in this month
+      empty_description: Choose another recorded month or add a new export.
+    account_coverage:
+      title: Accounts & statement coverage
+    categories:
+      title: Net outflow by category
+      uncategorized: Uncategorized
+      empty: No category outflows yet
+      description: Categorize transactions to see the largest outflow categories in each original currency.
+    recent:
+      title: Latest activity in this month
+      view_all: All transactions
+    upload:
+      title: Add or update a bank export
+      description: Wise transaction history, Wise currency statements, and Revolut CSV files.
+      entity: Whose finances?
+      owner: Account holder, as shown in the export
+      owner_hint: Use the exact personal or company name. It helps distinguish money received, money sent, and internal transfers.
+      file: CSV file
+      limit: Up to 10 MB. Preview first; no transactions are added until you confirm. Convert Excel workbooks to CSV before uploading.
+      preview: Preview import
+      pending: Your previews waiting for confirmation
+    connections:
+      title: Keep your accounts up to date
+      description: File imports work now. Live connections use the existing bank providers and your bank's consent flow.
+      csv_label: CSV updates
+      csv_status: Ready to import
+      sync_label: Live connection
+      sync_status: Manage in provider settings
+      hungary_note: For Hungary, Enable Banking is the connection candidate. Configure its application and certificate, then check actual bank availability and personal or business eligibility. Direct Wise statement tokens are restricted in this region.
+      overlap_note: Imported history is not a live connection. Before linking a synced account, reconcile its overlap with your imports; this workflow will not silently merge two sources.
+      configure: Configure bank connection
+      accounts: Bank accounts
+    import_history:
+      title: Your recent imports
+    statuses:
+      pending: Preview ready
+      complete: Imported
+      importing: Importing
+      reverting: Reverting
+      revert_failed: Revert needs attention
+      failed: Needs attention
+    preview:
+      title: Review bank file
+      back: Back to finance
+      ready: Preview only
+      source_rows: Source rows
+      movements: Validated entries
+      skipped: Skipped rows
+      review: Rows needing review
+      from: First activity
+      to: Last activity
+      idempotency: This preview describes the file. When confirmed, existing transaction identifiers are skipped. A repeated or overlapping export does not automatically mean new activity.
+      totals: Validated file totals
+      totals_hint: Original currency amounts. Fees are already included in money out. Transfers and FX legs are excluded from these cashflow totals.
+      fees: Of which fees
+      sample: Sample of validated entries
+      balance_notice: Importing this file records history, not a current bank balance. Unsupported or ambiguous rows shown above are left for review. Imported accounts remain excluded from net worth until a dated balance is reconciled.
+      discard: Discard preview
+      confirm: Import validated activity
+      formats:
+        wise_history: Wise transaction history
+        wise_statement: Wise currency statement
+        revolut: Revolut statement
+        revolut_statement: Revolut statement
+      kinds:
+        standard: Transaction
+        fee: Bank fee
+        transfer: Transfer
+        funds_movement: Funds movement
+        fx: Currency exchange
+        refund: Refund
+    import:
+      complete: "Imported %{created} entries. Already present: %{duplicates}. Skipped: %{skipped}. Needs review: %{review}."
+      already_complete: This file was already imported. No entries were added.
+      discarded: Preview discarded. No transactions were imported.
+    errors:
+      missing_file: Choose a CSV file to preview.
+      file_too_large: Choose a CSV file no larger than 10 MB.
+      cannot_discard: This import is no longer an untouched preview and cannot be discarded here.

@@ -1,0 +1,129 @@
+hu:
+  finance_workspace:
+    title: Pénzügyi áttekintés
+    nav: Pénzügyek
+    subtitle: Magán- és céges pénzügyek, az importált adatok időszakának egyértelmű jelzésével.
+    sure_overview: Vagyon és tervezés
+    add_file: Banki fájl hozzáadása
+    scope_label: Pénzügyi terület
+    entities:
+      all: Összes
+      personal: Magán
+      business: Céges
+    history_mode: Importált előzmények
+    accounts_tracked: Devizaszámlák
+    original_currencies: A magán- és céges számlák elkülönítve maradnak.
+    recorded_activity: Rögzített tételek
+    verified_rows: Az átvezetésekkel és a külön rögzített díjakkal együtt.
+    latest_activity: Legutóbbi exportált tranzakció
+    no_activity: Nincs tranzakció
+    export_update_needed: Friss export szükséges
+    imported_snapshot: CSV-pillanatkép
+    coverage_title: Tranzakciós előzmények, ellenőrzésre váró egyenlegekkel
+    coverage_notice: Az összegek az importált tranzakciókat mutatják. Az exportok között lehetnek hiányzó időszakok; a legutóbbi tranzakció dátuma nem igazolja a kivonat teljességét. Az ellenőrizetlen egyenlegű számlák nem szerepelnek a vagyonkimutatásban. A bevonásuk előtt egyeztesd a számla egyenlegét egy dátummal ellátott kivonattal.
+    balance_verified: Ellenőrzött egyenleg
+    balance_unverified: Ellenőrizetlen
+    empty:
+      title: Kezdd a banki előzményekkel
+      description: Tölts fel egy Wise- vagy Revolut-CSV-t, válaszd ki a magán- vagy céges területet, majd ellenőrizd az előnézetet. Az eredeti pénznemeket és banki tranzakcióazonosítókat megőrizzük.
+    columns:
+      currency: Pénznem
+      account: Számla
+      coverage: Tranzakciók időszaka
+      balance: Egyenleg
+      category: Kategória
+      amount: Összeg
+      date: Dátum
+      description: Leírás
+      file: Fájl
+      entity: Terület
+      status: Állapot
+      type: Típus
+    cashflow:
+      title: Havi pénzforgalom
+      description: Az eredeti pénznemek elkülönítve szerepelnek. Az átvezetéseket és devizaváltásokat kizárjuk. A visszatérítések beérkező pénznek számítanak; ez nem adózási eredménykimutatás.
+      month: Hónap
+      apply: Mutasd
+      money_in: Beérkezett
+      money_out: Kifizetett
+      net: Nettó pénzmozgás
+      empty: Ebben a hónapban nincs külső pénzmozgás
+      empty_description: Válassz másik rögzített hónapot, vagy tölts fel új exportot.
+    account_coverage:
+      title: Számlák és kivonati időszakok
+    categories:
+      title: Nettó kiáramlás kategóriánként
+      uncategorized: Kategória nélkül
+      empty: Még nincs kategorizált kiáramlás
+      description: A tranzakciók kategorizálásával pénznemenként láthatod a legnagyobb kiáramlásokat.
+    recent:
+      title: A hónap legutóbbi tranzakciói
+      view_all: Összes tranzakció
+    upload:
+      title: Banki export hozzáadása vagy frissítése
+      description: Wise-tranzakciótörténet, Wise-devizaszámlakivonat és Revolut-CSV.
+      entity: Melyik pénzügyi terület?
+      owner: Számlatulajdonos neve az export szerint
+      owner_hint: A személy vagy cég pontos nevét add meg. Ez segít elkülöníteni a beérkező és kimenő összegeket, valamint a belső átvezetéseket.
+      file: CSV-fájl
+      limit: Legfeljebb 10 MB. Először előnézet készül; tranzakciók csak a jóváhagyásod után kerülnek be. Az Excel-munkafüzetet feltöltés előtt mentsd CSV-ként.
+      preview: Import előnézete
+      pending: Jóváhagyásra váró előnézeteid
+    connections:
+      title: Tartsd naprakészen a számláidat
+      description: A fájlimport már használható. Az élő kapcsolatok a meglévő banki szolgáltatókon és a banki hozzájárulásodon keresztül működnek.
+      csv_label: CSV-frissítés
+      csv_status: Importálásra kész
+      sync_label: Élő bankkapcsolat
+      sync_status: Kezelés a szolgáltató beállításaiban
+      hungary_note: Magyarországon az Enable Banking lehet alkalmas kapcsolatra. Állítsd be az alkalmazást és a tanúsítványt, majd ellenőrizd az adott bank elérhetőségét és a magán- vagy céges használat feltételeit. A Wise közvetlen kivonatlekérési tokenjei ebben a régióban korlátozottak.
+      overlap_note: Az importált előzmény nem élő bankkapcsolat. Szinkronizált számla összekapcsolása előtt egyeztesd az importokkal átfedő tételeket; ez a folyamat nem von össze automatikusan két adatforrást.
+      configure: Bankkapcsolat beállítása
+      accounts: Bankszámlák
+    import_history:
+      title: Legutóbbi importjaid
+    statuses:
+      pending: Előnézet kész
+      complete: Importálva
+      importing: Importálás
+      reverting: Visszavonás
+      revert_failed: A visszavonás ellenőrzést igényel
+      failed: Ellenőrzést igényel
+    preview:
+      title: Banki fájl ellenőrzése
+      back: Vissza a pénzügyekhez
+      ready: Csak előnézet
+      source_rows: Forrásfájl sorai
+      movements: Érvényesített tételek
+      skipped: Kihagyott sorok
+      review: Ellenőrizendő sorok
+      from: Első tranzakció
+      to: Utolsó tranzakció
+      idempotency: Az előnézet a fájl tartalmát mutatja. Jóváhagyáskor a már rögzített tranzakcióazonosítókat kihagyjuk. Egy ismételt vagy átfedő export nem feltétlenül tartalmaz új tranzakciót.
+      totals: Az érvényesített fájl összesítése
+      totals_hint: Összegek az eredeti pénznemben. A díjak már benne vannak a kifizetett összegben. Az átvezetési és devizaváltási tételek nem szerepelnek a pénzforgalmi összesítésben.
+      fees: Ebből díjak
+      sample: Minta az érvényesített tételekből
+      balance_notice: Ez az import tranzakciós előzményeket rögzít, nem aktuális banki egyenleget. A fent jelzett, nem támogatott vagy nem egyértelmű sorok ellenőrzésre várnak. Az importált számlák egy dátummal ellátott egyenleg egyeztetéséig nem kerülnek a vagyonkimutatásba.
+      discard: Előnézet elvetése
+      confirm: Érvényesített tételek importálása
+      formats:
+        wise_history: Wise-tranzakciótörténet
+        wise_statement: Wise-devizaszámlakivonat
+        revolut: Revolut-kivonat
+        revolut_statement: Revolut-kivonat
+      kinds:
+        standard: Tranzakció
+        fee: Banki díj
+        transfer: Átvezetés
+        funds_movement: Pénzmozgás
+        fx: Devizaváltás
+        refund: Visszatérítés
+    import:
+      complete: "Importálva: %{created} tétel. Már szerepelt: %{duplicates}. Kihagyva: %{skipped}. Ellenőrizendő: %{review}."
+      already_complete: Ezt a fájlt már importáltad. Nem került be új tétel.
+      discarded: Előnézet elvetve. Nem importáltunk tranzakciókat.
+    errors:
+      missing_file: Válassz egy CSV-fájlt az előnézethez.
+      file_too_large: Legfeljebb 10 MB méretű CSV-fájlt válassz.
+      cannot_discard: Ez az import már nem érintetlen előnézet, ezért itt nem vethető el.

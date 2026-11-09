@@ -1,0 +1,19 @@
+<%= render DS::Card.new do %>
+  <div class="flex items-start justify-between gap-3 mb-4">
+    <div class="space-y-2">
+      <h2 class="font-medium text-primary"><%= t("finance_workspace.connections.title") %></h2>
+      <p class="text-sm text-secondary"><%= t("finance_workspace.connections.description") %></p>
+    </div>
+    <%= icon("landmark", size: "lg") %>
+  </div>
+  <dl class="space-y-3 mb-4">
+    <%= render DS::DetailRow.new(label: t("finance_workspace.connections.csv_label"), value: t("finance_workspace.connections.csv_status")) %>
+    <%= render DS::DetailRow.new(label: t("finance_workspace.connections.sync_label"), value: t("finance_workspace.connections.sync_status")) %>
+  </dl>
+  <p class="text-xs text-secondary mb-4"><%= t("finance_workspace.connections.hungary_note") %></p>
+  <p class="text-xs text-secondary mb-5"><%= t("finance_workspace.connections.overlap_note") %></p>
+  <div class="flex flex-wrap gap-2 mt-auto">
+    <%= render DS::Link.new(text: t("finance_workspace.connections.configure"), href: settings_providers_path, variant: :secondary, icon: "settings-2") %>
+    <%= render DS::Link.new(text: t("finance_workspace.connections.accounts"), href: accounts_path, variant: :ghost) %>
+  </div>
+<% end %>
