@@ -38,6 +38,20 @@ class FinanceWorkspace
     @transaction_count ||= entries.count
   end
 
+  def needs_review?
+    links.any?(&:needs_review?) || review_imports.any?
+  end
+
+  def review_import?(import)
+    import.summary.dig("bank_file", "preview", "review_count").to_i.positive? &&
+      import.summary.dig("bank_file", "review_resolved_at").blank?
+  end
+
+  def refund?(entry)
+    entry.amount.negative? && entry.entryable.extra&.dig("bank_file", "status") == "REFUNDED" &&
+      entry.entryable.extra&.dig("bank_file", "direction") == "IN"
+  end
+
   def period_transaction_count
     @period_transaction_count ||= period_entries.count
   end
@@ -50,11 +64,13 @@ class FinanceWorkspace
     @cashflows ||= external_transactions.group("entries.currency").order("entries.currency").pluck(
       "entries.currency",
       Arel.sql("SUM(CASE WHEN entries.amount < 0 THEN -entries.amount ELSE 0 END)"),
-      Arel.sql("SUM(CASE WHEN entries.amount > 0 THEN entries.amount ELSE 0 END)")
-    ).map do |currency, inflow, outflow|
+      Arel.sql("SUM(CASE WHEN entries.amount > 0 THEN entries.amount ELSE 0 END)"),
+      Arel.sql("SUM(CASE WHEN entries.amount < 0 AND transactions.extra -> 'bank_file' ->> 'status' = 'REFUNDED' AND transactions.extra -> 'bank_file' ->> 'direction' = 'IN' THEN -entries.amount ELSE 0 END)")
+    ).map do |currency, inflow, outflow, refunds|
       {
         currency: currency,
         inflow: Money.new(inflow, currency),
+        refunds: Money.new(refunds, currency),
         outflow: Money.new(outflow, currency),
         net: Money.new(inflow.to_d - outflow.to_d, currency)
       }
@@ -88,9 +104,7 @@ class FinanceWorkspace
   end
 
   def imports
-    @imports ||= user.family.imports.where(type: "TransactionImport")
-      .where("summary -> 'bank_file' ->> 'actor_id' = ?", user.id.to_s)
-      .order(created_at: :desc).limit(6)
+    @imports ||= (bank_imports.limit(6).to_a + review_imports).uniq(&:id).sort_by(&:created_at).reverse
   end
 
   def pending_imports
@@ -102,6 +116,19 @@ class FinanceWorkspace
   end
 
   private
+    def bank_imports
+      scope = user.family.imports.where(type: "TransactionImport")
+        .where("summary -> 'bank_file' ->> 'actor_id' = ?", user.id.to_s)
+      scope = scope.where("summary -> 'bank_file' ->> 'entity' = ?", entity) unless entity == "all"
+      scope.select(:id, :type, :family_id, :summary, :status, :created_at).order(created_at: :desc)
+    end
+
+    def review_imports
+      @review_imports ||= bank_imports
+        .where("(summary #>> '{bank_file,preview,review_count}') ~ '^[1-9][0-9]*$'")
+        .where("summary #>> '{bank_file,review_resolved_at}' IS NULL").to_a
+    end
+
     def period_entries
       entries.where(date: month.all_month)
     end

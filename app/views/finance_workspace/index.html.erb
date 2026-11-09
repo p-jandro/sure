@@ -17,6 +17,10 @@
     <%= render DS::Pill.new(label: t("finance_workspace.history_mode"), tone: :info, marker: false, icon: "file-check") %>
   </div>
 
+  <% if @workspace.needs_review? %>
+    <%= render DS::Alert.new(title: t("finance_workspace.review.title"), message: t("finance_workspace.review.description"), variant: :warning) %>
+  <% end %>
+
   <% if @workspace.links.any? %>
     <div class="grid gap-4 sm:grid-cols-3">
       <%= render DS::Card.new do %>
@@ -54,6 +58,7 @@
         <%= render DS::Table.new(rows: @workspace.cashflows, label: t("finance_workspace.cashflow.title")) do |table| %>
           <% table.with_column(t("finance_workspace.columns.currency")) { |row| row[:currency] } %>
           <% table.with_column(t("finance_workspace.cashflow.money_in"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:inflow]) } %>
+          <% table.with_column(t("finance_workspace.cashflow.refunds"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:refunds]) } %>
           <% table.with_column(t("finance_workspace.cashflow.money_out"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:outflow]) } %>
           <% table.with_column(t("finance_workspace.cashflow.net"), numeric: true, class: "privacy-sensitive") { |row| format_money(row[:net]) } %>
         <% end %>
@@ -80,8 +85,11 @@
               <p class="text-secondary"><%= row[:last_date] ? l(row[:last_date], format: :long) : "" %></p>
             </div>
           <% end %>
-          <% table.with_column(t("finance_workspace.columns.balance")) do |row| %>
-            <%= render DS::Pill.new(label: t(row[:link].balance_verified? ? "finance_workspace.balance_verified" : "finance_workspace.balance_unverified"), tone: row[:link].balance_verified? ? :success : :warning, marker: false) %>
+          <% table.with_column(t("finance_workspace.columns.status")) do |row| %>
+            <div class="flex flex-wrap gap-1">
+              <%= render DS::Pill.new(label: t(row[:link].balance_verified? ? "finance_workspace.balance_verified" : "finance_workspace.balance_unverified"), tone: row[:link].balance_verified? ? :success : :warning, marker: false) %>
+              <%= render DS::Pill.new(label: t("finance_workspace.review.badge"), tone: :warning, marker: false, icon: "triangle-alert") if row[:link].needs_review? %>
+            </div>
           <% end %>
         <% end %>
       </section>
@@ -111,7 +119,10 @@
         <% table.with_column(t("finance_workspace.columns.date")) { |entry| l(entry.date, format: :long) } %>
         <% table.with_column(t("finance_workspace.columns.description")) do |entry| %>
           <div class="space-y-1">
-            <p class="text-primary"><%= entry.name %></p>
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="text-primary"><%= entry.name %></p>
+              <%= render DS::Pill.new(label: t("finance_workspace.refund"), tone: :info, marker: false) if @workspace.refund?(entry) %>
+            </div>
             <p class="text-xs text-secondary"><%= entry.account.name %></p>
           </div>
         <% end %>
@@ -139,7 +150,10 @@
         <% end %>
         <% table.with_column(t("finance_workspace.columns.entity")) { |import| t("finance_workspace.entities.#{import.summary.dig('bank_file', 'entity')}") } %>
         <% table.with_column(t("finance_workspace.columns.status")) do |import| %>
-          <%= render DS::Pill.new(label: t("finance_workspace.statuses.#{import.status}"), tone: import.complete? ? :success : :neutral, marker: false) %>
+          <div class="flex flex-wrap gap-1">
+            <%= render DS::Pill.new(label: t("finance_workspace.statuses.#{import.status}"), tone: import.complete? ? :success : :neutral, marker: false) %>
+            <%= render DS::Pill.new(label: t("finance_workspace.review.badge"), tone: :warning, marker: false) if @workspace.review_import?(import) %>
+          </div>
         <% end %>
         <% table.with_column(t("finance_workspace.columns.date")) { |import| l(import.created_at.to_date, format: :long) } %>
       <% end %>

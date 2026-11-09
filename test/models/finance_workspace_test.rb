@@ -55,6 +55,43 @@ class FinanceWorkspaceTest < ActiveSupport::TestCase
     assert @personal.account.exclude_from_reports?
   end
 
+  test "refunds are a subset of cash received and never counted twice" do
+    create_entry(@personal.account, -100, @period)
+    refund = create_entry(@personal.account, -25, @period + 1.day)
+    refund.entryable.update!(extra: { bank_file: { status: "REFUNDED", direction: "IN" } })
+    fee = create_entry(@personal.account, 1, @period + 1.day)
+    fee.entryable.update!(extra: { bank_file: { status: "REFUNDED", direction: "IN", fee: true } })
+
+    workspace = FinanceWorkspace.new(user: @user, entity: "personal")
+    cashflow = workspace.cashflows.first
+
+    assert_equal 125.to_d, cashflow[:inflow].amount
+    assert_equal 25.to_d, cashflow[:refunds].amount
+    assert_equal 124.to_d, cashflow[:net].amount
+    assert workspace.refund?(refund)
+    assert_not workspace.refund?(fee)
+  end
+
+  test "review state persists on accounts and on imports without accepted entries" do
+    @personal.update!(needs_review: true)
+    assert FinanceWorkspace.new(user: @user).needs_review?
+
+    @personal.update!(needs_review: false)
+    review = @user.family.imports.create!(type: "TransactionImport", created_at: 2.days.ago, summary: {
+      bank_file: { actor_id: @user.id.to_s, entity: "personal", preview: { review_count: 1 } }
+    })
+    7.times do
+      @user.family.imports.create!(type: "TransactionImport", summary: {
+        bank_file: { actor_id: @user.id.to_s, entity: "personal", preview: { review_count: 0 } }
+      })
+    end
+
+    workspace = FinanceWorkspace.new(user: @user, entity: "personal")
+    assert workspace.needs_review?
+    assert_includes workspace.imports.map(&:id), review.id
+    assert_not FinanceWorkspace.new(user: @user, entity: "business").needs_review?
+  end
+
   private
     def create_link(entity, currency, owner: @user)
       account = Account.create!(family: owner.family, owner: owner, name: "#{entity} #{currency}", currency: currency,

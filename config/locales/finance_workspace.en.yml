@@ -23,6 +23,11 @@ en:
     coverage_notice: These figures describe imported transactions. Gaps between exports may exist, and the latest transaction date is not proof of a complete statement. Accounts without a verified balance stay outside net worth reports. Review the account and reconcile a dated statement balance before including it.
     balance_verified: Balance checked
     balance_unverified: Unverified
+    refund: Refund
+    review:
+      title: Some imported activity still needs review
+      description: Ambiguous rows were left out or earlier records were preserved for reconciliation. Affected accounts and imports stay marked below; cashflow may be incomplete until these items are resolved.
+      badge: Needs review
     empty:
       title: Start with your bank history
       description: Add a Wise or Revolut CSV, choose personal or business, and review the preview. Your original currencies and bank transaction identifiers are preserved.
@@ -45,6 +50,7 @@ en:
       month: Month
       apply: Show
       money_in: Money in
+      refunds: Of which refunds
       money_out: Money out
       net: Net movement
       empty: No external activity in this month
@@ -81,7 +87,7 @@ en:
       configure: Configure bank connection
       accounts: Bank accounts
     import_history:
-      title: Your recent imports
+      title: Recent imports & outstanding reviews
     statuses:
       pending: Preview ready
       complete: Imported

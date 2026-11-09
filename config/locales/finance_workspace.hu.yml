@@ -23,6 +23,11 @@ hu:
     coverage_notice: Az összegek az importált tranzakciókat mutatják. Az exportok között lehetnek hiányzó időszakok; a legutóbbi tranzakció dátuma nem igazolja a kivonat teljességét. Az ellenőrizetlen egyenlegű számlák nem szerepelnek a vagyonkimutatásban. A bevonásuk előtt egyeztesd a számla egyenlegét egy dátummal ellátott kivonattal.
     balance_verified: Ellenőrzött egyenleg
     balance_unverified: Ellenőrizetlen
+    refund: Visszatérítés
+    review:
+      title: Egyes importált tételek még ellenőrzésre várnak
+      description: A nem egyértelmű sorokat kihagytuk, vagy a korábbi tételeket megőriztük egyeztetésre. Az érintett számlákat és importokat lent jelöljük; a pénzforgalmi adatok a rendezésükig hiányosak lehetnek.
+      badge: Ellenőrizendő
     empty:
       title: Kezdd a banki előzményekkel
       description: Tölts fel egy Wise- vagy Revolut-CSV-t, válaszd ki a magán- vagy céges területet, majd ellenőrizd az előnézetet. Az eredeti pénznemeket és banki tranzakcióazonosítókat megőrizzük.
@@ -45,6 +50,7 @@ hu:
       month: Hónap
       apply: Mutasd
       money_in: Beérkezett
+      refunds: Ebből visszatérítés
       money_out: Kifizetett
       net: Nettó pénzmozgás
       empty: Ebben a hónapban nincs külső pénzmozgás
@@ -81,7 +87,7 @@ hu:
       configure: Bankkapcsolat beállítása
       accounts: Bankszámlák
     import_history:
-      title: Legutóbbi importjaid
+      title: Legutóbbi importok és nyitott ellenőrzések
     statuses:
       pending: Előnézet kész
       complete: Importálva

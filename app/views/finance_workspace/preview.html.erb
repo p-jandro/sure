@@ -36,6 +36,7 @@
     <%= render DS::Table.new(rows: Array(@preview[:totals]), label: t("finance_workspace.preview.totals")) do |table| %>
       <% table.with_column(t("finance_workspace.columns.currency")) { |row| row[:currency] } %>
       <% table.with_column(t("finance_workspace.cashflow.money_in"), numeric: true, class: "privacy-sensitive") { |row| format_money(Money.new(row[:inflow], row[:currency])) } %>
+      <% table.with_column(t("finance_workspace.cashflow.refunds"), numeric: true, class: "privacy-sensitive") { |row| format_money(Money.new(row[:refunds] || 0, row[:currency])) } %>
       <% table.with_column(t("finance_workspace.cashflow.money_out"), numeric: true, class: "privacy-sensitive") { |row| format_money(Money.new(row[:outflow], row[:currency])) } %>
       <% table.with_column(t("finance_workspace.preview.fees"), numeric: true, class: "privacy-sensitive") { |row| format_money(Money.new(row[:fees], row[:currency])) } %>
       <% table.with_column(t("finance_workspace.cashflow.net"), numeric: true, class: "privacy-sensitive") { |row| format_money(Money.new(row[:net], row[:currency])) } %>
