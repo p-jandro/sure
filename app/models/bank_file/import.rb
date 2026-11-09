@@ -153,6 +153,11 @@ class BankFile::Import
       end
 
       link_conversions(imported_entries)
+      matched_transfers = if parsed.format == "wise_history"
+        BankFile::TransferMatcher.new(family: @family, user: @user).match!(source_ids: parsed.rows.map(&:source_id))
+      else
+        0
+      end
       warnings = preview[:warnings].dup
       conflicts = refunded_conflicts(links)
       warnings << "#{conflicts} previously imported payments now appear as outgoing refunded rows. Their earlier entries were preserved for review; cashflow is incomplete." if conflicts.positive?
@@ -167,7 +172,7 @@ class BankFile::Import
             "formats" => (Array(link.metadata["formats"]) + [ parsed.format ]).uniq,
             "account_holder" => parsed.account_holder))
       end
-      { created:, duplicates:, skipped: parsed.skipped_count, review: parsed.review_count, accounts: links.length, warnings: }
+      { created:, duplicates:, skipped: parsed.skipped_count, review: parsed.review_count, accounts: links.length, matched_transfers:, warnings: }
     end
 
     def resolve_account(currency)
