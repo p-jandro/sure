@@ -2,6 +2,17 @@ require "test_helper"
 require "ostruct"
 
 class ImportsHelperTest < ActionView::TestCase
+  test "configuration partial paths reject unlisted types and path traversal" do
+    [
+      "UnknownImport", "Admin::TransactionImport", "../../layouts/application",
+      "TransactionImport/../../layouts/application", "/etc/passwd", ""
+    ].each do |type|
+      assert_raises(RuntimeError) do
+        permitted_import_configuration_path(OpenStruct.new(type: type))
+      end
+    end
+  end
+
   test "dry run resource labels come from locale keys" do
     %i[
       transactions balances accounts categories tags rules merchants
