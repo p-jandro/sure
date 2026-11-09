@@ -91,7 +91,7 @@ if (!(Test-Path $BootstrapFile)) {
 
 Start-SureDocker
 Invoke-SureCompose config --quiet
-if (!$SkipBuild) { Invoke-SureCompose build web }
+if (!$SkipBuild) { Update-SureBuildRevision; Invoke-SureCompose build web }
 Invoke-SureCompose up -d web
 Invoke-SureCompose run --rm -v "${PrivateRoot}/runtime:/bootstrap:ro" -v "${RepositoryRoot}/bin/windows/bootstrap.rb:/bootstrap_script.rb:ro" web bin/rails runner /bootstrap_script.rb
 Invoke-SureCompose --profile backup up -d worker backup

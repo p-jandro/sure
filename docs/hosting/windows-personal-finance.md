@@ -80,7 +80,7 @@ Start enables a daily local full backup at 02:00 UTC with 14-day retention. Run 
 .\bin\windows\Start.ps1 -Build
 ```
 
-Backups include the database, uploaded files and secret configuration. Keep them private. Local builds retain version and commit tags on the Docker image so the backup manifest identifies the matching source and image. Preserve these images and the source revision with the backup. See the upstream Docker hosting guide before restoring; never restore over a running instance without a reviewed recovery plan.
+Backups include the database, uploaded files and secret configuration. Keep them private. Build commands require a clean, committed checkout and refresh BUILD_COMMIT_SHA automatically. Local builds retain version and commit tags on the Docker image so the backup manifest identifies the matching source and image. Preserve these images and the source revision with the backup. See the upstream Docker hosting guide before restoring; never restore over a running instance without a reviewed recovery plan.
 
 ## Verification
 

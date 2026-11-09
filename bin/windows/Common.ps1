@@ -13,6 +13,19 @@ function Invoke-SureCompose {
     if ($CommandExit -ne 0) { throw "Sure command failed with exit code $CommandExit." }
 }
 
+function Update-SureBuildRevision {
+    $BuildRevision = (& git -C $RepositoryRoot rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $BuildRevision -notmatch '^[0-9a-f]{40}$') { throw 'Cannot determine the source revision.' }
+    $PendingChanges = & git -C $RepositoryRoot status --porcelain
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect the source checkout.' }
+    if ($PendingChanges) { throw 'Commit local source changes before building so backup image identities remain reproducible.' }
+    $EnvironmentText = [IO.File]::ReadAllText($EnvironmentFile)
+    $RevisionPattern = '(?m)^BUILD_COMMIT_SHA=[^\r\n]*'
+    if ([regex]::Matches($EnvironmentText, $RevisionPattern).Count -ne 1) { throw 'Expected one BUILD_COMMIT_SHA in the private environment file.' }
+    $EnvironmentText = [regex]::Replace($EnvironmentText, $RevisionPattern, "BUILD_COMMIT_SHA=$BuildRevision")
+    [IO.File]::WriteAllText($EnvironmentFile, $EnvironmentText, [Text.UTF8Encoding]::new($false))
+}
+
 function Test-SureDocker {
     $PreviousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
