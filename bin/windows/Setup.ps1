@@ -85,7 +85,7 @@ if (!(Test-Path $BootstrapFile)) {
     $Password = New-SureSecret 18
     $Profile = @{ email=$Email; password=$Password; first_name=$FirstName; last_name=$LastName; family_name=$FamilyName }
     [IO.File]::WriteAllText($BootstrapFile, ($Profile | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
-    $Login = "Sure local login\r\nURL: http://localhost:3333/finance\r\nEmail: $Email\r\nPassword: $Password\r\n\r\nChange your password in Settings after first sign-in. Keep this file private."
+    $Login = @("Sure local login", "URL: http://localhost:3333/finance", "Email: $Email", "Password: $Password", "", "Change your password in Settings after first sign-in. Keep this file private.") -join [Environment]::NewLine
     [IO.File]::WriteAllText((Join-Path $PrivateRoot 'runtime\login.txt'), $Login, (New-Object Text.UTF8Encoding($false)))
 }
 
