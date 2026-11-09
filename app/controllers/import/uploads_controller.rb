@@ -67,7 +67,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = Current.family.imports.generic_workflow.find(params[:import_id])
     end
 
     def handle_qif_upload

@@ -19,7 +19,7 @@ class Import::RowsController < ApplicationController
     end
 
     def set_import_row
-      @import = Current.family.imports.find(params[:import_id])
+      @import = Current.family.imports.generic_workflow.find(params[:import_id])
       @row = @import.rows.find(params[:id])
     end
 end

@@ -53,7 +53,8 @@ class Settings::BackgroundJobsController < Admin::BaseController
       claimed_type = params[:record_type].to_s
 
       CANCELLABLE_BASE_TYPES.each do |base|
-        record = base.find_by(id: params[:id])
+        scope = base == Import ? base.generic_workflow : base
+        record = scope.find_by(id: params[:id])
         return record if record && [ record.class.name, base.name ].include?(claimed_type)
       end
 

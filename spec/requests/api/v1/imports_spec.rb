@@ -84,7 +84,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
   path '/api/v1/imports' do
     get 'List imports' do
-      description 'List all imports for the user\'s family with pagination and filtering.'
+      description 'List generic-workflow imports for the user\'s family with pagination and filtering. Finance Workspace bank-file imports are excluded.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -318,7 +318,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available.'
+      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available. Finance Workspace bank-file imports return 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -345,7 +345,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'List import row diagnostics' do
-      description 'List sanitized import rows with validation errors and mapping resolution state.'
+      description 'List sanitized import rows with validation errors and mapping resolution state. Finance Workspace bank-file imports return 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

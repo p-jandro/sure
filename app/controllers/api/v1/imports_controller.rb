@@ -12,7 +12,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
   def index
     family = current_resource_owner.family
-    imports_query = family.imports.ordered
+    imports_query = family.imports.generic_workflow.ordered
 
     # Apply filters
     if params[:status].present?
@@ -186,7 +186,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     def import_scope
-      current_resource_owner.family.imports
+      current_resource_owner.family.imports.generic_workflow
     end
 
     def render_import_not_found

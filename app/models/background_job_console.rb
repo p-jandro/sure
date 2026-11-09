@@ -48,7 +48,7 @@ class BackgroundJobConsole
   def operations
     @operations ||= [
       Sync.incomplete.includes(:syncable).order(updated_at: :desc).limit(OPERATIONS_LIMIT).to_a,
-      Import.where(status: [ :importing, :reverting ]).includes(:family).order(updated_at: :desc).limit(OPERATIONS_LIMIT).to_a,
+      Import.generic_workflow.where(status: [ :importing, :reverting ]).includes(:family).order(updated_at: :desc).limit(OPERATIONS_LIMIT).to_a,
       ImportSession.where(status: :importing).includes(:family).order(updated_at: :desc).limit(OPERATIONS_LIMIT).to_a,
       FamilyExport.where(status: [ :pending, :processing ]).includes(:family).order(updated_at: :desc).limit(OPERATIONS_LIMIT).to_a
     ].flatten.sort_by(&:updated_at).reverse

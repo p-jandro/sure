@@ -88,6 +88,9 @@ class Import < ApplicationRecord
   before_save :ensure_utf8_encoding
   normalizes :client_chunk_id, with: ->(value) { value.strip.presence }
 
+  # Bank-file uploads belong to the Finance Workspace parser and actor-scoped flow.
+  # Test key presence so even malformed or empty metadata cannot expose the raw file.
+  scope :generic_workflow, -> { where("NOT (imports.summary ? 'bank_file')") }
   scope :ordered, -> { order(created_at: :desc) }
   scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
 

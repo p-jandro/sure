@@ -20,6 +20,6 @@ class Import::CleansController < ApplicationController
 
   private
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = Current.family.imports.generic_workflow.find(params[:import_id])
     end
 end

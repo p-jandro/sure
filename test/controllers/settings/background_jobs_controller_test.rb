@@ -29,6 +29,40 @@ class Settings::BackgroundJobsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("settings.background_jobs.operation.actions.mark_failed"), response.body
   end
 
+  test "console does not expose bank file imports" do
+    sign_in users(:sure_support_staff)
+    bank_file = imports(:transaction)
+    bank_file.update_columns(
+      status: "importing",
+      updated_at: 1.hour.ago,
+      summary: { "bank_file" => { "actor_id" => users(:family_admin).id } }
+    )
+
+    get settings_background_jobs_path
+
+    assert_response :success
+    assert_not_includes response.body, bank_file.id
+  end
+
+  test "generic admin cancellation cannot change a bank file import" do
+    sign_in users(:sure_support_staff)
+    bank_file = imports(:transaction)
+    bank_file.update_columns(
+      status: "importing",
+      updated_at: 1.hour.ago,
+      summary: { "bank_file" => nil }
+    )
+
+    assert_no_difference "DebugLogEntry.count" do
+      [ "Import", "TransactionImport" ].each do |record_type|
+        post cancel_settings_background_jobs_path(record_type: record_type, id: bank_file.id)
+
+        assert_response :not_found
+        assert_equal "importing", bank_file.reload.status
+      end
+    end
+  end
+
   test "family admin is redirected away" do
     sign_in users(:family_admin)
 

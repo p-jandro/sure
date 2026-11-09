@@ -93,6 +93,46 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @import.complete? || @import.failed? || @import.revert_failed?, import_data["status_detail"]["terminal"]
   end
 
+  test "index excludes Finance Workspace bank files without hiding ordinary imports" do
+    @diagnostic_import.update_columns(summary: { "bank_file" => { "actor_id" => @user.id } })
+
+    get api_v1_imports_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal @family.imports.count - 1, payload.dig("meta", "total_count")
+    assert_includes payload["data"].map { |item| item["id"] }, @import.id
+    assert_not_includes payload["data"].map { |item| item["id"] }, @diagnostic_import.id
+  end
+
+  test "show and row diagnostics reject bank files for read and write API keys" do
+    [ @user.id, users(:family_member).id ].each do |actor_id|
+      @diagnostic_import.update_columns(summary: { "bank_file" => { "actor_id" => actor_id } })
+
+      [ @api_key, @read_only_api_key ].each do |key|
+        [ api_v1_import_url(@diagnostic_import), rows_api_v1_import_url(@diagnostic_import) ].each do |path|
+          get path, headers: api_headers(key)
+
+          assert_response :not_found
+          assert_equal "not_found", JSON.parse(response.body)["error"]
+          assert_not_includes response.body, @diagnostic_category_name
+        end
+      end
+    end
+  end
+
+  test "empty bank file metadata does not expose the import through the API" do
+    @diagnostic_import.update_columns(summary: { "bank_file" => nil })
+
+    get api_v1_import_url(@diagnostic_import), headers: api_headers(@api_key)
+
+    assert_response :not_found
+
+    get rows_api_v1_import_url(@diagnostic_import), headers: api_headers(@api_key)
+
+    assert_response :not_found
+  end
+
   test "should show import" do
     get api_v1_import_url(@import), headers: api_headers(@api_key)
     assert_response :success
