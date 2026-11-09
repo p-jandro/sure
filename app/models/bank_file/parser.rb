@@ -131,21 +131,27 @@ class BankFile::Parser
         "exchange_rate" => row["Exchange rate"].to_s, "created_on" => row["Created on"].to_s,
         "finished_on" => row["Finished on"].to_s, "category" => row["Category"].to_s
       }
+      own_account_transfer = row["Source name"].present? && normalized_name(row["Source name"]) == normalized_name(row["Target name"])
+      metadata["internal_transfer"] = true if own_account_transfer
+      movement_kind = own_account_transfer ? "funds_movement" : "standard"
       notes = [ row["Reference"], row["Note"] ].compact_blank.join(" · ")
 
       case direction
       when "OUT"
         add_row(id:, suffix: "OUT:main", date:, amount: source_amount, currency: source_currency,
-          name: row["Target name"].presence || "Wise payment", notes:, kind: "standard", metadata:)
+          name: row["Target name"].presence || "Wise payment", notes:, kind: movement_kind, metadata:)
         add_fee(id:, suffix: "OUT:fee", date:, amount: source_fee, currency: source_fee_currency, metadata:)
       when "IN"
         if target_fee.positive? && target_fee_currency != target_currency
           raise BankFile::Error, "Row #{@row_number}: incoming fee currency needs statement-level reconciliation."
         end
         add_row(id:, suffix: "IN:main", date:, amount: -(target_amount + target_fee), currency: target_currency,
-          name: row["Source name"].presence || "Wise receipt", notes:, kind: "standard", metadata:)
+          name: row["Source name"].presence || "Wise receipt", notes:, kind: movement_kind, metadata:)
         add_fee(id:, suffix: "IN:fee", date:, amount: target_fee, currency: target_currency, metadata:)
       when "NEUTRAL"
+        if target_fee.positive? && target_fee_currency != target_currency
+          raise BankFile::Error, "Row #{@row_number}: conversion fee currency needs statement-level reconciliation."
+        end
         unless normalized_name(row["Source name"]) == normalized_name(row["Target name"]) && source_currency != target_currency
           raise BankFile::Error, "Row #{@row_number}: unsupported neutral movement; use currency statements for this movement."
         end
@@ -177,7 +183,7 @@ class BankFile::Parser
       is_exchange = id.start_with?("BALANCE_TRANSACTION-") || type == "CONVERSION"
       metadata = { "source_id" => id, "statement_type" => type, "statement_fee" => fee.to_s("F"), "direction" => amount.negative? ? "OUT" : "IN" }
       # A refund can reuse the original reference; direction and timestamp keep it distinct.
-      identity = "#{id}:#{amount.negative? ? 'OUT' : 'IN'}:#{required(row, 'Date')}"
+      identity = "#{id}:#{amount.negative? ? 'OUT' : 'IN'}:#{date.iso8601}"
       add_row(id:, identity:, suffix: "main", date:, amount: amount_for_entry, currency: code,
         name: row["Description"].presence || "Wise transaction", notes: row["Payment Reference"].to_s,
         kind: is_exchange ? "funds_movement" : "standard", metadata:)
@@ -205,6 +211,12 @@ class BankFile::Parser
       end
       type = row["Type"].to_s.upcase
       metadata = { "source_id" => id, "status" => status, "type" => type, "started_on" => row["Started Date"].to_s, "finished_on" => row["Completed Date"].to_s, "fingerprint_id" => id.start_with?("fingerprint:") }
+      if fee.positive?
+        @skipped_count += 1
+        @review_records << { "source_id" => id, "currency" => code, "reason" => "revolut_fee" }
+        @warnings << "Revolut rows with a nonzero fee are held for review until the fee is reconciled against statement balances."
+        return
+      end
       kind = type == "EXCHANGE" ? "funds_movement" : "standard"
       add_row(id:, suffix: "main", date:, amount: -amount, currency: code, name: row["Description"].presence || "Revolut transaction", notes: "", kind:, metadata:)
       add_fee(id:, suffix: "fee", date:, amount: fee, currency: code, metadata:)
@@ -221,6 +233,9 @@ class BankFile::Parser
       key = [ currency, external_id ]
       signature = [ amount.to_s("F"), date.iso8601, kind ]
       if @seen.key?(key)
+        if @format == "wise_statement"
+          raise BankFile::Error, "Row #{@row_number}: a Wise statement reference repeats on the same date. Review the statement so repeated refunds are not merged."
+        end
         raise BankFile::Error, "Row #{@row_number}: the same bank ID has conflicting values within one currency. Review a currency statement." unless @seen[key] == signature
         @skipped_count += 1
         @warnings << "Repeated identical bank IDs within the file were imported once."

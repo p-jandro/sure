@@ -29,8 +29,9 @@ class BankFile::Import
   def preview
     result = parsed
     warnings = result.warnings.dup
-    if result.review_count.positive?
-      warnings << "#{result.review_count} outgoing refunded rows need review. They were not booked as spending or refunds; cashflow coverage is incomplete."
+    refund_reviews = result.review_records.count { |record| record["reason"] == "refunded_out" }
+    if refund_reviews.positive?
+      warnings << "#{refund_reviews} outgoing refunded rows need review. They were not booked as spending or refunds; cashflow coverage is incomplete."
     end
     {
       format: result.format, bank: result.bank, row_count: result.row_count,
@@ -38,7 +39,7 @@ class BankFile::Import
       review_count: result.review_count, currencies: result.rows.map(&:currency).uniq.sort,
       date_from: result.rows.map(&:date).min&.iso8601, date_to: result.rows.map(&:date).max&.iso8601,
       totals: totals, warnings:, account_holder: result.account_holder,
-      sample_rows: result.rows.first(12).map { |row| { date: row.date.iso8601, name: row.name, amount: row.amount.to_s("F"), currency: row.currency, kind: row.kind } }
+      sample_rows: result.rows.first(12).map { |row| { date: row.date.iso8601, name: row.name, amount: row.amount.to_s("F"), currency: row.currency, kind: preview_kind(row) } }
     }
   end
 
@@ -62,10 +63,19 @@ class BankFile::Import
     result = nil
     @family.with_lock do
       @import.lock!
+      metadata = @import.summary["bank_file"]
+      raise BankFile::Error, "This upload's metadata changed. Upload it again." unless metadata.is_a?(Hash) && metadata["version"] == VERSION
+      @content = @import.raw_file_str.to_s
+      @entity = metadata["entity"]
+      @owner_name = metadata["owner_name"]
+      @actor_id = metadata["actor_id"]
+      @parsed = nil
       authorize!
       raise BankFile::Error, "The stored upload changed. Upload it again." unless ActiveSupport::SecurityUtils.secure_compare(checksum, @import.checksum.to_s)
       if @import.complete?
-        result = @import.summary.fetch("bank_file").fetch("result").symbolize_keys
+        saved_result = @import.summary.dig("bank_file", "result")
+        raise BankFile::Error, "This upload has no completion receipt. Review it before importing again." unless saved_result.is_a?(Hash)
+        result = saved_result.symbolize_keys
         next
       end
       raise BankFile::Error, "This upload is not ready to import." unless @import.pending? || @import.failed?
@@ -83,10 +93,10 @@ class BankFile::Import
 
   private
     def authorize!
-      unless @family&.persisted? && @user&.persisted? && @user.family_id == @family.id && !@user.guest?
+      unless @family&.persisted? && @user&.persisted? && @user.family_id == @family.id && @user.active? && !@user.guest?
         raise BankFile::Error, "You cannot import into this workspace."
       end
-      if @actor_id && @actor_id != @user.id
+      if @import && @actor_id != @user.id
         raise BankFile::Error, "Only the person who uploaded this file may open or import it."
       end
       raise BankFile::Error, "Choose personal or business finances." unless ENTITIES.include?(@entity)
@@ -107,13 +117,15 @@ class BankFile::Import
         inflow = -cashflow.select { |row| row.amount.negative? }.sum(0.to_d, &:amount)
         outflow = cashflow.select { |row| row.amount.positive? }.sum(0.to_d, &:amount)
         fees = rows.select { |row| row.metadata["fee"] }.sum(0.to_d, &:amount)
+        refunds = -cashflow.select { |row| refund_row?(row) }.sum(0.to_d, &:amount)
         transfer_movement = -rows.select { |row| row.kind == "funds_movement" }.sum(0.to_d, &:amount)
-        { currency:, inflow: inflow.to_s("F"), outflow: outflow.to_s("F"), fees: fees.to_s("F"), transfers: transfer_movement.to_s("F"), net: (inflow - outflow).to_s("F") }
+        { currency:, inflow: inflow.to_s("F"), outflow: outflow.to_s("F"), fees: fees.to_s("F"), refunds: refunds.to_s("F"), transfers: transfer_movement.to_s("F"), net: (inflow - outflow).to_s("F") }
       end
     end
 
     def perform_import
       links = parsed.rows.map(&:currency).uniq.to_h { |code| [ code, resolve_account(code) ] }
+      validate_revolut_overlap!(links)
       created = 0
       duplicates = 0
       imported_entries = {}
@@ -131,7 +143,7 @@ class BankFile::Import
           next
         end
 
-        transaction = Transaction.new(kind: row.kind,
+        transaction = Transaction.new(kind: row.kind, category: category_for(row),
           extra: { "bank_file" => row.metadata.merge("version" => VERSION, "bank" => parsed.bank, "format" => parsed.format,
             "entity" => @entity, "owner_name" => @owner_name, "upload_id" => @import.id, "checksum" => @import.checksum) })
         entry = account.entries.create!(entryable: transaction, date: row.date, amount: row.amount, currency: row.currency,
@@ -144,7 +156,9 @@ class BankFile::Import
       warnings = preview[:warnings].dup
       conflicts = refunded_conflicts(links)
       warnings << "#{conflicts} previously imported payments now appear as outgoing refunded rows. Their earlier entries were preserved for review; cashflow is incomplete." if conflicts.positive?
-      links.each_value do |link|
+      review_links = BankFile::AccountLink.where(family: @family, provider: parsed.bank, entity: @entity,
+        currency: parsed.review_records.map { |record| record["currency"] }).to_a
+      (links.values + review_links).uniq(&:id).each do |link|
         dates = parsed.rows.select { |row| row.currency == link.currency }.map(&:date)
         link.update!(coverage_start_on: [ link.coverage_start_on, dates.min ].compact.min,
           coverage_end_on: [ link.coverage_end_on, dates.max ].compact.max,
@@ -185,6 +199,52 @@ class BankFile::Import
         metadata: { "formats" => [ parsed.format ], "account_holder" => parsed.account_holder })
     end
 
+    def preview_kind(row)
+      return "fee" if row.metadata["fee"]
+      return "refund" if refund_row?(row)
+      row.kind
+    end
+
+    def refund_row?(row)
+      row.amount.negative? && row.metadata["status"] == "REFUNDED" && row.metadata["direction"] == "IN"
+    end
+
+    def category_for(row)
+      return if row.kind == "funds_movement"
+      if row.metadata["fee"]
+        name = "Bank fees"
+        icon = "landmark"
+      else
+        name = row.metadata["category"].to_s.strip.presence
+        return unless name
+        incoming = row.amount.negative? && !refund_row?(row)
+        name = "Income · #{name}" if incoming
+        icon = incoming ? "circle-dollar-sign" : "receipt"
+      end
+      @categories ||= {}
+      @categories[name] ||= @family.categories.find_or_create_by!(name:) do |category|
+        category.color = Category::COLORS[2]
+        category.lucide_icon = icon
+      end
+    end
+
+    def validate_revolut_overlap!(links)
+      return unless parsed.format == "revolut" && parsed.rows.any? { |row| row.metadata["fingerprint_id"] }
+
+      exact_replay = @family.imports.complete.where(checksum: @import.checksum)
+        .where("summary -> 'bank_file' ->> 'entity' = ?", @entity)
+        .where("summary -> 'bank_file' ->> 'actor_id' = ?", @user.id).exists?
+      return if exact_replay
+
+      parsed.rows.group_by(&:currency).each do |currency, rows|
+        next unless rows.any? { |row| row.metadata["fingerprint_id"] }
+        dates = rows.map(&:date)
+        if links.fetch(currency).account.entries.where(source:, date: dates.min..dates.max).exists?
+          raise BankFile::Error, "This Revolut file has no stable transaction IDs and overlaps imported dates. Use non-overlapping exports or reconcile the overlap first; no transactions were added."
+        end
+      end
+    end
+
     def link_conversions(imported_entries)
       parsed.rows.select(&:transfer_key).group_by(&:transfer_key).each_value do |rows|
         outflow = rows.find { |row| row.amount.positive? }
@@ -199,7 +259,7 @@ class BankFile::Import
     end
 
     def refunded_conflicts(links)
-      parsed.review_records.count do |record|
+      parsed.review_records.select { |record| record["reason"] == "refunded_out" }.count do |record|
         account = links[record["currency"]]&.account || BankFile::AccountLink.find_by(family: @family, provider: parsed.bank, entity: @entity, currency: record["currency"])&.account
         account&.entries&.exists?(source:, external_id: record["external_id"])
       end

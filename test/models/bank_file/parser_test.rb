@@ -21,6 +21,20 @@ class BankFile::ParserTest < ActiveSupport::TestCase
     assert_equal 2, result.rows.count(&:transfer_key)
   end
 
+  test "own-account receipts and payments are movements but fees remain spending" do
+    result = parse_history([
+      history_row("ID" => "OWN-1", "Target name" => "  EXAMPLE PERSON  ", "Source fee amount" => "1"),
+      history_row("ID" => "OWN-2", "Direction" => "IN", "Target name" => "Example Person")
+    ])
+    assert_equal [ "funds_movement", "standard", "funds_movement" ], result.rows.map(&:kind)
+    assert result.rows.first.metadata["internal_transfer"]
+  end
+
+  test "conversion fees in another currency are not added to the target amount" do
+    row = history_row("Direction" => "NEUTRAL", "Target name" => "Example Person", "Source currency" => "GBP", "Target fee amount" => "2", "Target fee currency" => "EUR")
+    assert_raises(BankFile::Error) { parse_history([ row ]) }
+  end
+
   test "actual refund credits import but outgoing refunded amounts require review" do
     result = parse_history([
       history_row("ID" => "REFUND-1", "Direction" => "IN", "Status" => "REFUNDED", "Source name" => "Merchant", "Target name" => "Example Person", "Target amount (after fees)" => "25"),
@@ -66,6 +80,13 @@ class BankFile::ParserTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 1, 2), result.rows.first.date
   end
 
+  test "Wise statement identity does not change with its supported date format" do
+    csv = "TransferWise ID,Date,Amount,Currency,Description\nTRANSFER-5,02/01/2026,-100,EUR,Example payment\n"
+    first = BankFile::Parser.new(content: csv).call
+    second = BankFile::Parser.new(content: csv.sub("02/01/2026", "2026-01-02")).call
+    assert_equal first.rows.first.external_id, second.rows.first.external_id
+  end
+
   test "Revolut identical purchases without IDs remain two purchases" do
     row = "CARD_PAYMENT,2026-01-02 12:00:00,2026-01-02 12:00:00,Cafe,-4.50,0,EUR,COMPLETED\n"
     csv = "Type,Started Date,Completed Date,Description,Amount,Fee,Currency,State\n" + row + row
@@ -80,6 +101,14 @@ class BankFile::ParserTest < ActiveSupport::TestCase
     result = parse_history([ history_row("Status" => "PENDING"), history_row("ID" => "ZERO-2", "Source amount (after fees)" => "0", "Target amount (after fees)" => "0") ])
     assert_empty result.rows
     assert_equal 2, result.skipped_count
+  end
+
+  test "Revolut fee rows are held for review instead of guessing the balance impact" do
+    csv = "Type,Started Date,Completed Date,Description,Amount,Fee,Currency,State\nCARD_PAYMENT,2026-01-02 12:00:00,2026-01-02 12:00:00,Cafe,-4.50,0.50,EUR,COMPLETED\n"
+    result = BankFile::Parser.new(content: csv).call
+    assert_empty result.rows
+    assert_equal 1, result.review_count
+    assert_equal 1, result.skipped_count
   end
 
   test "invalid dates currencies and duplicate column names are rejected" do
